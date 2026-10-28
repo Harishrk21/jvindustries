@@ -1,0 +1,1 @@
+"""JV-OMS FastAPI application package."""

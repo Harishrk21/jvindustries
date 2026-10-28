@@ -1,0 +1,41 @@
+# Python
+backend/.venv/
+backend/**/__pycache__/
+backend/**/*.pyc
+backend/.pytest_cache/
+backend/jvoms_dev.db
+backend/evidence_store/
+*.egg-info/
+
+# HANDOFF: backend/.env IS committed intentionally for boss laptop bootstrap.
+# Rotate JWT / Groq / DB passwords before any public deploy.
+
+# Node / web
+web/node_modules/
+web/dist/
+web/.vite/
+web/android/app/build/
+web/android/.gradle/
+web/android/local.properties
+web/android/.idea/
+
+# Android (legacy / capacitor)
+mobile/.gradle/
+mobile/build/
+mobile/app/build/
+mobile/local.properties
+mobile/.idea/
+*.apk
+*.aab
+*.iml
+
+# OS / IDE
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+*.log
+.env.local
+
+# Local OCR scratch (not part of product)
+tmp-ocr/

@@ -1,0 +1,22 @@
+package com.jvindustries.oms
+
+import android.os.Bundle
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
+import dagger.hilt.android.AndroidEntryPoint
+import com.jvindustries.oms.core.ui.JvOmsAppRoot
+import com.jvindustries.oms.core.ui.theme.JvOmsTheme
+
+@AndroidEntryPoint
+class MainActivity : ComponentActivity() {
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        enableEdgeToEdge()
+        setContent {
+            JvOmsTheme {
+                JvOmsAppRoot()
+            }
+        }
+    }
+}
