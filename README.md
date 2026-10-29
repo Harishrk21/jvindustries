@@ -6,9 +6,11 @@ Production **PWA + Android APK** client with **FastAPI** backend and **MySQL 8**
 
 ## Boss / new laptop — start here
 
-1. **Windows setup + MySQL queries:** [`docs/HANDOFF_WINDOWS_BOSS.md`](docs/HANDOFF_WINDOWS_BOSS.md)  
+1. **Windows run steps:** [`docs/HANDOFF_WINDOWS_BOSS.md`](docs/HANDOFF_WINDOWS_BOSS.md)  
 2. **Blueprint done vs not done:** [`docs/BLUEPRINT_STATUS.md`](docs/BLUEPRINT_STATUS.md)  
 3. **Logins / roles:** [`docs/ROLE_LOGIN_MAP.md`](docs/ROLE_LOGIN_MAP.md)
+
+`backend/.env` includes **Aiven MySQL** + **Groq key** — no local MySQL install and no key pasting required.
 
 ---
 
@@ -19,55 +21,31 @@ Production **PWA + Android APK** client with **FastAPI** backend and **MySQL 8**
 | Web / PWA | React + TypeScript + Vite + PWA |
 | Android APK | Same web app via **Capacitor** |
 | API | Python FastAPI |
-| Database | **MySQL 8** |
+| Database | **MySQL (Aiven cloud)** |
 | Evidence | Local `evidence_store/` |
 | OTP | Mock WhatsApp (Meta optional later) |
 
 ```
 /web        ← PWA + Capacitor
 /backend    ← FastAPI
-/database   ← MySQL SQL
+/database   ← optional local MySQL SQL (fallback only)
 /docs       ← plans + handoff
 /scripts    ← Windows helpers + verify
 ```
 
 ---
 
-## Fast path (Windows)
+## Fast path (Windows) — clone and run
 
-### 1) MySQL
-
-```powershell
-.\scripts\setup-mysql.ps1 -RootPassword "YOUR_MYSQL_ROOT_PASSWORD"
-```
-
-Creates DB `jvoms` (+ `jvoms_test`) and user `jvoms` / `JvOms@2026`.  
-SQL source: `database/setup_mysql.sql`
-
-### 2) API
+Needs: **Git + Python 3.11+ + Node 20+** only.
 
 ```powershell
-cd backend
-python -m venv .venv
-.\.venv\Scripts\pip install -r requirements.txt
-.\.venv\Scripts\python -m uvicorn app.main:app --host 0.0.0.0 --port 8080
+git clone https://github.com/Harishrk21/jvindustries.git
+cd jvindustries
+.\scripts\start-backend.ps1   # window 1 → http://127.0.0.1:8080/health
+.\scripts\start-web.ps1       # window 2 → http://127.0.0.1:5173
 ```
 
-Or: `.\scripts\start-backend.ps1`  
-Health: http://127.0.0.1:8080/health
-
-`backend/.env` is included in this handoff clone for convenience.
-
-### 3) Web
-
-```powershell
-cd web
-npm install
-npm run dev -- --host 127.0.0.1 --port 5173
-```
-
-Or: `.\scripts\start-web.ps1`  
-App: http://127.0.0.1:5173  
 Login: `owner` / `Owner@123`
 
 ---

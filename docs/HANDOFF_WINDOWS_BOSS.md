@@ -1,25 +1,30 @@
 # JV-OMS — Windows handoff (boss laptop)
 
-**Stack:** React PWA (`web/`) + Capacitor Android + FastAPI (`backend/`) + **MySQL 8 only**.  
+**Stack:** React PWA (`web/`) + Capacitor Android + FastAPI (`backend/`) + **MySQL via Aiven (cloud)**.  
 **Do not use** PostgreSQL / SQLite for the app database.
 
 **Blueprint status (done / not done):** [`BLUEPRINT_STATUS.md`](./BLUEPRINT_STATUS.md)
 
-This repo includes `backend/.env` for local development (shared intentionally for handoff). Treat secrets carefully; rotate JWT / Groq / DB password before public hosting.
+`backend/.env` is committed with **Aiven MySQL** + **Groq API key** so you can clone and run **without installing MySQL** and **without pasting keys**.
 
-### Fastest path (after clone)
+---
+
+## Fastest path (after clone) — no MySQL install
 
 ```powershell
-# 1) MySQL once
-.\scripts\setup-mysql.ps1 -RootPassword "YOUR_MYSQL_ROOT_PASSWORD"
+cd D:\
+git clone https://github.com/Harishrk21/jvindustries.git
+cd jvindustries
 
-# 2) API (new PowerShell window)
+# Window 1 — API
 .\scripts\start-backend.ps1
 
-# 3) Web (another window)
+# Window 2 — Web
 .\scripts\start-web.ps1
 # → http://127.0.0.1:5173   login: owner / Owner@123
 ```
+
+Health check: http://127.0.0.1:8080/health
 
 ---
 
@@ -28,121 +33,52 @@ This repo includes `backend/.env` for local development (shared intentionally fo
 | Software | Notes |
 |----------|--------|
 | **Windows 10/11** | PowerShell 5+ |
-| **MySQL Server 8.0** | Include `mysql.exe` on PATH or default install path |
-| **Python 3.11+** | `python --version` |
+| **Git** | For clone |
+| **Python 3.11+** | `python --version` (Add to PATH) |
 | **Node.js 20+** | `node -v` / `npm -v` |
-| **Git** | For clone/push |
 | **Android Studio** (optional) | Only if building APK |
 
-Default MySQL client path used by scripts:
+**Not required:** local MySQL Server (app uses Aiven cloud DB in `.env`).
 
-`C:\Program Files\MySQL\MySQL Server 8.0\bin\mysql.exe`
+If PowerShell blocks scripts:
+
+```powershell
+Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
+```
 
 ---
 
-## 1) Clone / open project
+## 1) Clone
 
 ```powershell
 cd D:\
-git clone <YOUR_REPO_URL> mobile-app-jv
-cd mobile-app-jv
+git clone https://github.com/Harishrk21/jvindustries.git
+cd jvindustries
 ```
 
 Confirm folders: `backend`, `web`, `database`, `docs`, `scripts`.
 
 ---
 
-## 2) MySQL — create database + user
+## 2) Backend API (port 8080)
 
-### Option A — PowerShell script (recommended)
-
-```powershell
-cd D:\mobile-app-jv
-.\scripts\setup-mysql.ps1 -RootPassword "YOUR_MYSQL_ROOT_PASSWORD"
-```
-
-### Option B — manual SQL (as MySQL root)
-
-Open **MySQL Command Line Client** or:
+`.env` already points at Aiven. No DB setup step.
 
 ```powershell
-& "C:\Program Files\MySQL\MySQL Server 8.0\bin\mysql.exe" -u root -p
-```
-
-Paste:
-
-```sql
-CREATE DATABASE IF NOT EXISTS jvoms
-  CHARACTER SET utf8mb4
-  COLLATE utf8mb4_unicode_ci;
-
-CREATE DATABASE IF NOT EXISTS jvoms_test
-  CHARACTER SET utf8mb4
-  COLLATE utf8mb4_unicode_ci;
-
-CREATE USER IF NOT EXISTS 'jvoms'@'localhost' IDENTIFIED BY 'JvOms@2026';
-CREATE USER IF NOT EXISTS 'jvoms'@'%' IDENTIFIED BY 'JvOms@2026';
-
-GRANT ALL PRIVILEGES ON jvoms.* TO 'jvoms'@'localhost';
-GRANT ALL PRIVILEGES ON jvoms.* TO 'jvoms'@'%';
-GRANT ALL PRIVILEGES ON jvoms_test.* TO 'jvoms'@'localhost';
-GRANT ALL PRIVILEGES ON jvoms_test.* TO 'jvoms'@'%';
-FLUSH PRIVILEGES;
-```
-
-Or from file:
-
-```powershell
-Get-Content .\database\setup_mysql.sql -Raw |
-  & "C:\Program Files\MySQL\MySQL Server 8.0\bin\mysql.exe" -u root -p --default-character-set=utf8mb4
-```
-
-### Verify connection
-
-```powershell
-& "C:\Program Files\MySQL\MySQL Server 8.0\bin\mysql.exe" -u jvoms -p"JvOms@2026" -e "SHOW DATABASES; SELECT 1 AS ok;"
-```
-
-Or:
-
-```powershell
-Get-Content .\database\check_mysql.sql -Raw |
-  & "C:\Program Files\MySQL\MySQL Server 8.0\bin\mysql.exe" -u jvoms -p"JvOms@2026" jvoms
-```
-
-**App connection string** (already in `backend/.env`):
-
-```text
-mysql+pymysql://jvoms:JvOms%402026@127.0.0.1:3306/jvoms?charset=utf8mb4
-```
-
-(`@` in password is URL-encoded as `%40`.)
-
----
-
-## 3) Backend API (port 8080)
-
-```powershell
-cd D:\mobile-app-jv\backend
-
-python -m venv .venv
-.\.venv\Scripts\python -m pip install --upgrade pip
-.\.venv\Scripts\python -m pip install -r requirements.txt
-
-# Start API (creates tables + seeds roles/users on boot)
-.\.venv\Scripts\python -m uvicorn app.main:app --host 0.0.0.0 --port 8080
-```
-
-Shortcut:
-
-```powershell
-cd D:\mobile-app-jv
+cd D:\jvindustries
 .\scripts\start-backend.ps1
 ```
 
-### Check health
+Or manually:
 
-Browser or:
+```powershell
+cd D:\jvindustries\backend
+python -m venv .venv
+.\.venv\Scripts\python -m pip install -r requirements.txt
+.\.venv\Scripts\python -m uvicorn app.main:app --host 0.0.0.0 --port 8080
+```
+
+### Check health
 
 ```powershell
 Invoke-RestMethod http://127.0.0.1:8080/health | ConvertTo-Json -Depth 5
@@ -151,36 +87,28 @@ Invoke-RestMethod http://127.0.0.1:8080/health | ConvertTo-Json -Depth 5
 Expect:
 
 - `status`: `ok`
-- `whatsapp.provider`: `mock_whatsapp` (accepted)
+- `whatsapp.provider`: `mock_whatsapp`
 - `whatsapp.allow_mock`: `true`
 - `evidence.writable`: `true`
 
-API docs: http://127.0.0.1:8080/docs
+API docs: http://127.0.0.1:8080/docs  
 
-Tables are created automatically via SQLAlchemy `create_all` + seed on startup. **No Alembic migrate required for first boot.**
+Tables + seed users are created on first API boot.
 
 ---
 
-## 4) Web PWA (port 5173)
+## 3) Web PWA (port 5173)
 
 ```powershell
-cd D:\mobile-app-jv\web
-npm install
-npm run dev -- --host 127.0.0.1 --port 5173
+cd D:\jvindustries
+.\scripts\start-web.ps1
 ```
 
 Open: http://127.0.0.1:5173
 
-Shortcut:
-
-```powershell
-cd D:\mobile-app-jv
-.\scripts\start-web.ps1
-```
-
 ---
 
-## 5) Seeded logins (development)
+## 4) Seeded logins
 
 | User ID | Password | Role |
 |---------|----------|------|
@@ -196,80 +124,52 @@ Full map: `docs/ROLE_LOGIN_MAP.md`
 
 ---
 
-## 6) Smoke / verify (optional)
+## 5) Optional smoke tests
 
-With API running on 8080:
+With API on 8080:
 
 ```powershell
-cd D:\mobile-app-jv
+cd D:\jvindustries
 .\scripts\smoke-live.ps1
-.\scripts\verify-phase-a.ps1
-.\scripts\verify-phase-b.ps1
 .\scripts\verify-roles.ps1
-.\backend\.venv\Scripts\python .\scripts\verify_phase_c.py
-.\backend\.venv\Scripts\python .\scripts\verify_phase_e.py
-```
-
-Unit tests (uses `jvoms_test` if configured in pytest; otherwise test DB URL in conftest):
-
-```powershell
-cd D:\mobile-app-jv\backend
-.\.venv\Scripts\python -m pytest tests/test_phase_e_commercial.py tests/test_phase_f_finance.py -q
 ```
 
 ---
 
-## 7) Android APK (optional)
+## 6) Android APK (optional)
 
 ```powershell
-cd D:\mobile-app-jv\web
+cd D:\jvindustries\web
 npm run build
 npx cap sync android
 npx cap open android
 ```
 
-Build APK in Android Studio. Details: `docs/CLIENT_PWA_APK.md`
-
 ---
 
-## 8) What boss can change without coding
-
-| Item | Where |
-|------|--------|
-| Yard GPS pin | Login as **owner** → Settings → Geofence |
-| Passwords | Settings → Change password |
-| WhatsApp Meta later | Fill `WHATSAPP_TOKEN` + `WHATSAPP_PHONE_NUMBER_ID` in `.env`, set `WHATSAPP_ALLOW_MOCK=false` only when live |
-| Enforce GPS on site | `.env` → `GPS_ENFORCE=true` |
-| Groq vision key | `.env` → `GROQ_API_KEY=` (get from https://console.groq.com — not shipped in git; GitHub blocks live keys) |
-
----
-
-## 9) Troubleshooting
+## 7) Troubleshooting
 
 | Symptom | Fix |
 |---------|-----|
-| `DATABASE_UNAVAILABLE` | Start MySQL service; check `DATABASE_URL` password encoding |
-| Access denied for `jvoms` | Re-run `database/setup_mysql.sql` as root |
-| Port 8080 in use | Stop other uvicorn / change port |
-| Weak JWT warning | Already set strong secret in shipped `.env` |
+| `DATABASE_UNAVAILABLE` / DNS fail to Aiven host | Check Aiven console — service must be **running**; try another network/DNS. Fallback: install local MySQL and switch `DATABASE_URL` (see `database/setup_mysql.sql`) |
+| Port 8080 in use | Stop other uvicorn |
 | OTP | Use on-screen `otp_preview` (mock WhatsApp) |
-| Forced password change | Only in `APP_ENV=production`; development keeps seed passwords |
+| Forced password change | Only when `APP_ENV=production` |
 
-Windows MySQL service:
+Test Aiven from project:
 
 ```powershell
-Get-Service -Name "*mysql*"
-# Start-Service MySQL80   # name may vary
+cd D:\jvindustries\backend
+.\.venv\Scripts\python ..\scripts\test-aiven-mysql.py
 ```
 
 ---
 
-## 10) Related docs
+## 8) Related docs
 
 | Doc | Purpose |
 |-----|---------|
-| `docs/BLUEPRINT_STATUS.md` | What’s done vs not done vs blueprint |
+| `docs/BLUEPRINT_STATUS.md` | What’s done vs not done |
 | `docs/ROLE_LOGIN_MAP.md` | Roles / modules |
-| `docs/GO_LIVE.md` / `GO_LIVE_PHASES.md` | Cutover |
-| `docs/IMPLEMENTATION_PLAN.md` | Original plan |
-| `docs/PHASE_A_*.md` … `PHASE_F_*.md` | Plant gap phases |
+| `docs/GO_LIVE.md` | Production cutover |
+| `database/setup_mysql.sql` | **Optional** local MySQL only if Aiven unreachable |
